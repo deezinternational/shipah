@@ -25,17 +25,6 @@ def format_lb(kg):
     return int(kg * 4)
 
 # ---- Robust Address Splitter ----
-def extract_address2(street):
-    # Common patterns: Apt 5, Suite 19, Ste 2, #11, Unit 12, Bldg 4
-    match = re.search(r'(Apt|Apartment|Suite|Ste|Unit|#|Bldg|Building|Floor|Fl|Rm|Room|Lot|Space|Dept|Trailer|Trlr|PO Box|P\.O\. Box|POB|Box)\s*[\w\-]+', street, re.IGNORECASE)
-    if match:
-        # Remove address2 from street
-        address2 = match.group(0)
-        street_clean = street.replace(address2, '').replace(',', '').strip()
-        return street_clean, address2.strip()
-    # No address2 found
-    return street.strip(), ""
-    
 def smart_address_split(address: str):
     # Remove country if present
     address = re.sub(r'\b(USA?|United States|US)\b\.?', '', address, flags=re.IGNORECASE).strip(", \n")
@@ -57,14 +46,13 @@ def smart_address_split(address: str):
     rest = ", ".join(lines)
 
     # Regex: street, optional address2, city, state, zip
-    # E.g. "14828 W 6TH AVE, STE 9B, GOLDEN, CO 80401-5000"
     pat = re.compile(
         r"""^
-        (?P<street>[\d\w .#/-]+?)            # street address (non-greedy)
+        (?P<street>[\d\w .#/-]+?)                                   # street address (non-greedy)
         (?:,\s*(?P<address2>(Apt|Apartment|Suite|Ste|Unit|#|Bldg|Building|Floor|Fl|Rm|Room|Lot|Space|Dept|Trailer|Trlr|PO Box|P\.O\. Box|POB|Box)\s*[\w\-]+))?   # optional address2
-        ,?\s*(?P<city>[A-Za-z .'-]+)         # city
-        ,\s*(?P<state>[A-Z]{2})              # state
-        \s+(?P<zip>\d{5}(?:-\d{4})?)         # zip
+        ,?\s*(?P<city>[A-Za-z .'-]+)                                # city
+        ,\s*(?P<state>[A-Z]{2})                                     # state
+        \s+(?P<zip>\d{5}(?:-\d{4})?)                                # zip
         """, re.IGNORECASE | re.VERBOSE)
 
     m = pat.search(rest)
