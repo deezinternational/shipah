@@ -52,14 +52,15 @@ def robust_address_split(address: str):
         zip_code = ""
     if len(lines) > 1:
         name = lines[0]
-    return {
-        "Name": name,
-        "Street Address": street,
-        "City": city,
-        "State": state,
-        "ZIP": zip_code,
-        "Country": country,
-    }
+    return [
+        {"Field": "Name", "Value": name},
+        {"Field": "Street Address", "Value": street},
+        {"Field": "City", "Value": city},
+        {"Field": "State", "Value": state},
+        {"Field": "ZIP", "Value": zip_code},
+        {"Field": "Country", "Value": country}
+    ]
+
 
 # ---- Streamlit UI ----
 st.set_page_config(page_title="Shipping Tools", layout="centered")
@@ -87,15 +88,47 @@ with st.expander("🏷️ Address Splitter", expanded=True):
         value="4506 Central School Road, St. Charles, MO 63304, USA"
     )
     if address_input.strip():
-        parts = robust_address_split(address_input)
+        fields = robust_address_split(address_input)
         st.subheader("Split Address")
-
-        # Use columns for a grid/table effect
-        for label, value in parts.items():
-            cols = st.columns([2, 5, 1])
-            cols[0].markdown(f"**{label}**")
-            cols[1].text_input("", value, key=f"value_{label}", label_visibility="collapsed")
-            if value:
-                cols[2].write(st_copy_to_clipboard(value, "📋"), unsafe_allow_html=True)
-            else:
-                cols[2].write("")
+        
+        # Table header
+        st.markdown(
+            """
+            <style>
+            .addr-table th, .addr-table td { padding: 4px 10px; text-align: left; }
+            .addr-table td { vertical-align: middle; }
+            </style>
+            <table class="addr-table">
+              <thead>
+                <tr>
+                  <th>Field</th>
+                  <th>Value</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+            """,
+            unsafe_allow_html=True
+        )
+        
+        for i, entry in enumerate(fields):
+            label = entry["Field"]
+            value = entry["Value"]
+            key = f"{label}_{i}"
+            st.markdown(
+                f"""
+                <tr>
+                  <td style="vertical-align:middle;"><b>{label}</b></td>
+                  <td style="vertical-align:middle;">
+                    <input style="width:98%;padding:4px;border-radius:4px;border:1px solid #444;background:#232323;color:#fff;" 
+                           type="text" value="{value}" readonly onclick="this.select()"/>
+                  </td>
+                  <td style="vertical-align:middle;">
+                    {st_copy_to_clipboard(value, "📋")}
+                  </td>
+                </tr>
+                """,
+                unsafe_allow_html=True
+            )
+        # End table
+        st.markdown("</tbody></table>", unsafe_allow_html=True)
