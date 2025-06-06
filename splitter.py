@@ -61,47 +61,24 @@ def robust_address_split(address: str):
         "Country": country,
     }
 
-# ---- Address Splitter as before ----
-def robust_address_split(address: str):
-    lines = [l.strip() for l in address.replace('\r\n', '\n').split('\n') if l.strip()]
-    country = ""
-    name = ""
-    full_address = ", ".join(lines)
-    country_match = re.search(r"(USA|United States|Canada|Mexico)$", full_address, re.IGNORECASE)
-    if country_match:
-        country = country_match.group(0)
-        full_address = re.sub(r",?\s*(" + country + r")$", "", full_address)
-    else:
-        country = ""
-    match = re.match(
-        r"(?P<street>.+?),\s*(?P<city>[A-Za-z .'-]+),\s*(?P<state>[A-Z]{2})\s*(?P<zip>\d{5}(?:-\d{4})?)",
-        full_address
-    )
-    if match:
-        street = match.group("street")
-        city = match.group("city")
-        state = match.group("state")
-        zip_code = match.group("zip")
-    else:
-        street = full_address
-        city = ""
-        state = ""
-        zip_code = ""
-    if len(lines) > 1:
-        name = lines[0]
-    return {
-        "Name": name,
-        "Street Address": street,
-        "City": city,
-        "State": state,
-        "ZIP": zip_code,
-        "Country": country,
-    }
-
 # ---- Streamlit UI ----
 st.set_page_config(page_title="Shipping Tools", layout="centered")
 st.title("Shipping Helper Tool")
 
+# --- Packaging Splitter ---
+with st.expander("📦 Packaging Splitter", expanded=True):
+    weight = st.number_input("Enter total shipment weight (kg):", min_value=0.1, step=0.1, value=25.0, format="%.1f")
+    option = st.selectbox("Select Packaging Option:", list(BOX_CONFIGS.keys()))
+    box_sizes = BOX_CONFIGS[option]
+    split = split_weight(weight, box_sizes)
+    st.subheader("Packaging Breakdown")
+    st.table({
+        "Box #": [f"{i+1}" for i in range(len(split))],
+        "Kg": [f"{x:.1f}" for x in split],
+        "Lb (1kg=4lb)": [str(format_lb(x)) for x in split]
+    })
+
+# --- Address Splitter ---
 with st.expander("🏷️ Address Splitter", expanded=True):
     st.write("Paste an address (any format, partial or full, with or without country):")
     address_input = st.text_area(
@@ -112,31 +89,8 @@ with st.expander("🏷️ Address Splitter", expanded=True):
     if address_input.strip():
         parts = robust_address_split(address_input)
         st.subheader("Split Address")
-
-        # Add custom CSS to make button and input align horizontally
-        st.markdown("""
-            <style>
-            .address-row {
-                display: flex;
-                align-items: center;
-                gap: 0.5em;
-                margin-bottom: 0.1em;
-            }
-            .address-row input {
-                flex: 1 1 70%;
-                margin-bottom: 0 !important;
-            }
-            </style>
-        """, unsafe_allow_html=True)
-
         for label, value in parts.items():
-            row_key = f"row_{label}"
-            st.markdown(f'<div class="address-row">', unsafe_allow_html=True)
-            st.text_input(label, value, key=label, label_visibility="visible")
-            # Insert the clipboard button as raw HTML in the same flex row
+            col1, col2 = st.columns([10,1])
+            col1.text_input(label, value, key=label)
             if value:
-                st.markdown(
-                    st_copy_to_clipboard(value, "📋"),
-                    unsafe_allow_html=True
-                )
-            st.markdown("</div>", unsafe_allow_html=True)
+                col2.write(st_copy_to_clipboard(value, "📋"), unsafe_allow_html=True)
