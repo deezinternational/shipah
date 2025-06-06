@@ -25,11 +25,11 @@ def smart_address_split(address: str):
     # Regex: street, optional address2, city, state, zip
     pat = re.compile(
         r"""^
-        (?P<street>[\d\w ./\-\#]+?)                                      # street address (allow . / - #)
+        (?P<street>[\d\w ./\-\#]+?)                                     
         (?:,\s*(?P<address2>(Apt|Apartment|Suite|Ste|Unit|#|Bldg|Building|Floor|Fl|Rm|Room|Lot|Space|Dept|Trailer|Trlr|PO Box|P\.O\. Box|POB|Box)\s*[\w\-]+))?   # optional address2
-        ,?\s*(?P<city>[A-Za-z .'-]+)                                     # city
-        ,\s*(?P<state>[A-Z]{2})                                          # state
-        \s+(?P<zip>\d{5}(?:-\d{4})?)                                     # zip
+        ,?\s*(?P<city>[A-Za-z .'-]+)                                   
+        ,\s*(?P<state>[A-Z]{2})                                          
+        \s+(?P<zip>\d{5}(?:-\d{4})?)                                    
         $""", re.IGNORECASE | re.VERBOSE)
 
     m = pat.search(rest)
