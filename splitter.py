@@ -31,27 +31,22 @@ def smart_address_split(address: str):
     # If all on one line, split by comma for possible name presence
     if len(lines) == 1:
         items = [x.strip() for x in lines[0].split(',')]
-        # If there are 4+ items, assume: Name, Street, City, State ZIP
         if len(items) >= 4:
             name = items[0]
             street = items[1]
             city = items[2]
             state_zip = items[3]
-        # If there are 3 items, assume: Street, City, State ZIP
         elif len(items) == 3:
             name = ""
             street = items[0]
             city = items[1]
             state_zip = items[2]
         else:
-            # Fallback: everything is the street
             name = ""
             street = lines[0]
             city = ""
             state_zip = ""
     else:
-        # Multi-line
-        # If first line has no digits, treat as name, else as street
         if lines and not any(char.isdigit() for char in lines[0]):
             name = lines[0]
             street = lines[1] if len(lines) > 1 else ""
@@ -60,8 +55,6 @@ def smart_address_split(address: str):
             name = ""
             street = lines[0]
             city_state_zip = lines[1] if len(lines) > 1 else ""
-        # Split city/state/zip as before
-        items = [street, city_state_zip]
         city = ""
         state_zip = ""
         if ',' in city_state_zip:
@@ -71,7 +64,6 @@ def smart_address_split(address: str):
         else:
             city = city_state_zip
             state_zip = ""
-    # Now parse state and zip
     state, zip_code = "", ""
     if 'state_zip' in locals():
         m = re.match(r'([A-Z]{2})\s*(\d{5}(?:-\d{4})?)?', state_zip)
@@ -79,7 +71,6 @@ def smart_address_split(address: str):
             state = m.group(1)
             zip_code = m.group(2) if m.group(2) else ""
         else:
-            # Try splitting by space
             sz = state_zip.strip().split()
             if len(sz) == 2:
                 state, zip_code = sz
@@ -87,13 +78,16 @@ def smart_address_split(address: str):
                 state = sz[0]
     else:
         state, zip_code = "", ""
-    # Final clean-up
     name = name.strip(",")
     street = street.strip(",")
     city = city.strip(",")
     state = state.strip(",")
     zip_code = zip_code.strip(",")
-    return name, street, city, state, zip_code
+
+    # --- Address 2 extraction ---
+    street_clean, address2 = extract_address2(street)
+
+    return name, street_clean, address2, city, state, zip_code
 
 # ---- Streamlit UI ----
 st.set_page_config(page_title="Shipping Tools", layout="centered")
@@ -118,18 +112,22 @@ with st.expander("🏷️ Address Splitter", expanded=True):
     address_input = st.text_area(
         "Address Input",
         height=100,
-        value="Adam Sanders, 88 Huntoon Memorial Hwy, Rochdale, MA 01542"
+        value="Adam Sanders\n88 Huntoon Memorial Hwy\nRochdale, MA 01542"
     )
     if address_input.strip():
-        name, street, city, state, zip_code = smart_address_split(address_input)
+        name, street, address2, city, state, zip_code = smart_address_split(address_input)
         st.subheader("Split Address")
         st.write(f"**Name:** {name}")
         st.write(f"**Street Address:** {street}")
+        st.write(f"**Address 2:** {address2}")
         st.write(f"**City:** {city}")
         st.write(f"**State:** {state}")
         st.write(f"**ZIP:** {zip_code}")
-        sheets_row = f"{name}\t\t{street}\t{city}\t{state}\t{zip_code}"
+
+        # Tab-separated with blank Address2 if not found
+        sheets_row = f"{name}\t\t{street}\t{address2}\t{city}\t{state}\t{zip_code}"
+
         st.markdown("#### Copy for Google Sheets Row")
         st.code(sheets_row, language="")
         st_copy_to_clipboard(sheets_row, "📋 Copy Row")
-        st.caption("Paste directly into your Google Sheet row (Name | Org | Street Address | City | State | ZIP).")
+        st.caption("Paste into your Google Sheet row (Name | Org | Street Address | Address2 | City | State | ZIP).")
