@@ -27,39 +27,51 @@ def format_lb(kg):
 # ---- Address Splitter ----
 
 def robust_address_split(address: str):
-    # Tidy up the address
-    lines = [l.strip() for l in address.replace("\r\n", "\n").split("\n") if l.strip()]
-    name = lines[0] if len(lines) > 1 else ""
-    addr_line = lines[1] if len(lines) > 1 else lines[0] if lines else ""
-    citystatezip = ""
+    # Split into lines and strip whitespace
+    lines = [l.strip() for l in address.replace('\r\n', '\n').split('\n') if l.strip()]
     country = ""
-    if len(lines) > 2:
-        addr_line = lines[1]
-        citystatezip = lines[2]
-        if len(lines) > 3:
-            country = lines[3]
-    elif ',' in addr_line:
-        parts = addr_line.rsplit(',', 1)
-        addr_line, citystatezip = parts[0].strip(), parts[1].strip()
-    city, state, zipcode = "", "", ""
-    match = re.search(r"(.*?),?\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)", citystatezip)
-    if match:
-        city, state, zipcode = match.group(1), match.group(2), match.group(3)
+    name = ""
+    
+    # Combine all lines into one for parsing
+    full_address = ", ".join(lines)
+    
+    # Guess and remove country if present
+    country_match = re.search(r"(USA|United States|Canada|Mexico)$", full_address, re.IGNORECASE)
+    if country_match:
+        country = country_match.group(0)
+        full_address = re.sub(r",?\s*(" + country + r")$", "", full_address)
     else:
-        if not name:
-            addr_line = address
-            city = state = zipcode = ""
-    if not country:
-        if "USA" in address or "United States" in address:
-            country = "USA"
-        else:
-            country = ""
+        country = ""
+    
+    # Pattern for: street, city, state zip
+    # Example: 4506 Central School Road, St. Charles, MO 63304
+    match = re.match(
+        r"(?P<street>.+?),\s*(?P<city>[A-Za-z .'-]+),\s*(?P<state>[A-Z]{2})\s*(?P<zip>\d{5}(?:-\d{4})?)",
+        full_address
+    )
+    
+    if match:
+        street = match.group("street")
+        city = match.group("city")
+        state = match.group("state")
+        zip_code = match.group("zip")
+    else:
+        # fallback: try to guess parts
+        street = full_address
+        city = ""
+        state = ""
+        zip_code = ""
+    
+    # If name is present, it's probably the first line, if >1 line in original input
+    if len(lines) > 1:
+        name = lines[0]
+    
     return {
         "Name": name,
-        "Street Address": addr_line,
+        "Street Address": street,
         "City": city,
         "State": state,
-        "ZIP": zipcode,
+        "ZIP": zip_code,
         "Country": country,
     }
 
