@@ -25,6 +25,7 @@ def format_lb(kg):
     return int(kg * 4)
 
 # ---- Robust Address Splitter ----
+
 def robust_address_split(address: str):
     lines = [l.strip() for l in address.replace('\r\n', '\n').split('\n') if l.strip()]
     country = ""
@@ -83,17 +84,16 @@ with st.expander("🏷️ Address Splitter", expanded=True):
         name, street, city, state, zip_code = robust_address_split(address_input)
         st.subheader("Split Address")
 
-        # For review
         st.write(f"**Name:** {name}")
         st.write(f"**Street Address:** {street}")
         st.write(f"**City:** {city}")
         st.write(f"**State:** {state}")
         st.write(f"**ZIP:** {zip_code}")
 
-        # Format for Google Sheets: tabs between columns
-        sheets_row = f"{name}\t{street}\t{city}\t{state}\t{zip_code}"
+        # Add empty column after Name for Organization
+        sheets_row = f"{name}\t\t{street}\t{city}\t{state}\t{zip_code}"
 
         st.markdown("#### Copy for Google Sheets Row")
-        st.code(sheets_row, language="")  # for quick visual
+        st.code(sheets_row, language="")
         st_copy_to_clipboard(sheets_row, "📋 Copy Row")
-        st.caption("Paste directly into your Google Sheet row (it will fill columns).")
+        st.caption("Paste directly into your Google Sheet row (Name | Org | Street Address | City | State | ZIP).")
