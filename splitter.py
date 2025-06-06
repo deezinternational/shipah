@@ -25,7 +25,17 @@ def format_lb(kg):
     return int(kg * 4)
 
 # ---- Robust Address Splitter ----
-
+def extract_address2(street):
+    # Common patterns: Apt 5, Suite 19, Ste 2, #11, Unit 12, Bldg 4
+    match = re.search(r'(Apt|Apartment|Suite|Ste|Unit|#|Bldg|Building|Floor|Fl|Rm|Room|Lot|Space|Dept|Trailer|Trlr|PO Box|P\.O\. Box|POB|Box)\s*[\w\-]+', street, re.IGNORECASE)
+    if match:
+        # Remove address2 from street
+        address2 = match.group(0)
+        street_clean = street.replace(address2, '').replace(',', '').strip()
+        return street_clean, address2.strip()
+    # No address2 found
+    return street.strip(), ""
+    
 def smart_address_split(address: str):
     lines = [l.strip() for l in address.replace('\r\n', '\n').split('\n') if l.strip()]
     # If all on one line, split by comma for possible name presence
