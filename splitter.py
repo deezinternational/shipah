@@ -89,8 +89,13 @@ with st.expander("🏷️ Address Splitter", expanded=True):
     if address_input.strip():
         parts = robust_address_split(address_input)
         st.subheader("Split Address")
+
+        # Use columns for a grid/table effect
         for label, value in parts.items():
-            col1, col2 = st.columns([10,1])
-            col1.text_input(label, value, key=label)
+            cols = st.columns([2, 5, 1])
+            cols[0].markdown(f"**{label}**")
+            cols[1].text_input("", value, key=f"value_{label}", label_visibility="collapsed")
             if value:
-                col2.write(st_copy_to_clipboard(value, "📋"), unsafe_allow_html=True)
+                cols[2].write(st_copy_to_clipboard(value, "📋"), unsafe_allow_html=True)
+            else:
+                cols[2].write("")
