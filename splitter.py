@@ -55,8 +55,8 @@ st.title("Shipping Helper Tool")
 
 BOX_CONFIGS = {
     "Los Doz": [12, 6, 2],
-    "AML (9kg)": [9],
-    "AML (10kg)": [10]
+    "AML (9kg/Box)": [9],
+    "Low Grav (10kg/Box)": [10]
 }
 
 def split_weight(weight, box_sizes):
