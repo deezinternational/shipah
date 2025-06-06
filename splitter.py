@@ -90,9 +90,7 @@ with st.expander("🏷️ Address Splitter", expanded=True):
         parts = robust_address_split(address_input)
         st.subheader("Split Address")
         for label, value in parts.items():
-            col1, col2 = st.columns([3,1])
+            col1, col2 = st.columns([10,1])
             col1.text_input(label, value, key=label)
             if value:
-                col2.write("")  # for alignment
-                st_copy_to_clipboard(value, f"Copy {label}")
-
+                col2.write(st_copy_to_clipboard(value, "📋"), unsafe_allow_html=True)
