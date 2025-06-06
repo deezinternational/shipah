@@ -26,33 +26,73 @@ def format_lb(kg):
 
 # ---- Robust Address Splitter ----
 
-def robust_address_split(address: str):
+def smart_address_split(address: str):
     lines = [l.strip() for l in address.replace('\r\n', '\n').split('\n') if l.strip()]
-    country = ""
-    name = ""
-    full_address = ", ".join(lines)
-    country_match = re.search(r"(USA|United States|Canada|Mexico)$", full_address, re.IGNORECASE)
-    if country_match:
-        country = country_match.group(0)
-        full_address = re.sub(r",?\s*(" + country + r")$", "", full_address)
+    # If all on one line, split by comma for possible name presence
+    if len(lines) == 1:
+        items = [x.strip() for x in lines[0].split(',')]
+        # If there are 4+ items, assume: Name, Street, City, State ZIP
+        if len(items) >= 4:
+            name = items[0]
+            street = items[1]
+            city = items[2]
+            state_zip = items[3]
+        # If there are 3 items, assume: Street, City, State ZIP
+        elif len(items) == 3:
+            name = ""
+            street = items[0]
+            city = items[1]
+            state_zip = items[2]
+        else:
+            # Fallback: everything is the street
+            name = ""
+            street = lines[0]
+            city = ""
+            state_zip = ""
     else:
-        country = ""
-    match = re.match(
-        r"(?P<street>.+?),\s*(?P<city>[A-Za-z .'-]+),\s*(?P<state>[A-Z]{2})\s*(?P<zip>\d{5}(?:-\d{4})?)",
-        full_address
-    )
-    if match:
-        street = match.group("street")
-        city = match.group("city")
-        state = match.group("state")
-        zip_code = match.group("zip")
-    else:
-        street = full_address
+        # Multi-line
+        # If first line has no digits, treat as name, else as street
+        if lines and not any(char.isdigit() for char in lines[0]):
+            name = lines[0]
+            street = lines[1] if len(lines) > 1 else ""
+            city_state_zip = lines[2] if len(lines) > 2 else ""
+        else:
+            name = ""
+            street = lines[0]
+            city_state_zip = lines[1] if len(lines) > 1 else ""
+        # Split city/state/zip as before
+        items = [street, city_state_zip]
         city = ""
-        state = ""
-        zip_code = ""
-    if len(lines) > 1:
-        name = lines[0]
+        state_zip = ""
+        if ',' in city_state_zip:
+            parts = city_state_zip.split(',')
+            city = parts[0].strip()
+            state_zip = parts[1].strip() if len(parts) > 1 else ""
+        else:
+            city = city_state_zip
+            state_zip = ""
+    # Now parse state and zip
+    state, zip_code = "", ""
+    if 'state_zip' in locals():
+        m = re.match(r'([A-Z]{2})\s*(\d{5}(?:-\d{4})?)?', state_zip)
+        if m:
+            state = m.group(1)
+            zip_code = m.group(2) if m.group(2) else ""
+        else:
+            # Try splitting by space
+            sz = state_zip.strip().split()
+            if len(sz) == 2:
+                state, zip_code = sz
+            elif len(sz) == 1:
+                state = sz[0]
+    else:
+        state, zip_code = "", ""
+    # Final clean-up
+    name = name.strip(",")
+    street = street.strip(",")
+    city = city.strip(",")
+    state = state.strip(",")
+    zip_code = zip_code.strip(",")
     return name, street, city, state, zip_code
 
 # ---- Streamlit UI ----
@@ -78,21 +118,17 @@ with st.expander("🏷️ Address Splitter", expanded=True):
     address_input = st.text_area(
         "Address Input",
         height=100,
-        value="Adam Sanders\n88 Huntoon Memorial Hwy\nRochdale, MA 01542"
+        value="Adam Sanders, 88 Huntoon Memorial Hwy, Rochdale, MA 01542"
     )
     if address_input.strip():
-        name, street, city, state, zip_code = robust_address_split(address_input)
+        name, street, city, state, zip_code = smart_address_split(address_input)
         st.subheader("Split Address")
-
         st.write(f"**Name:** {name}")
         st.write(f"**Street Address:** {street}")
         st.write(f"**City:** {city}")
         st.write(f"**State:** {state}")
         st.write(f"**ZIP:** {zip_code}")
-
-        # Add empty column after Name for Organization
         sheets_row = f"{name}\t\t{street}\t{city}\t{state}\t{zip_code}"
-
         st.markdown("#### Copy for Google Sheets Row")
         st.code(sheets_row, language="")
         st_copy_to_clipboard(sheets_row, "📋 Copy Row")
