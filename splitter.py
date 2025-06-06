@@ -3,16 +3,13 @@ import re
 from st_copy_to_clipboard import st_copy_to_clipboard
 
 def smart_address_split(address: str):
-    # Remove country if present
     address = re.sub(r'\b(USA?|United States|US)\b\.?', '', address, flags=re.IGNORECASE).strip(", \n")
 
-    # Split into lines or by comma if single line
     if "\n" in address:
         lines = [x.strip() for x in address.split("\n") if x.strip()]
     else:
         lines = [x.strip() for x in address.split(",")]
 
-    # If first line is clearly a name (no digits), use as name
     if lines and not any(char.isdigit() for char in lines[0]):
         name = lines[0]
         lines = lines[1:]
@@ -21,16 +18,9 @@ def smart_address_split(address: str):
 
     rest = ", ".join(lines)
 
-    # No comments after pattern lines!
     pat = re.compile(
-        r"""
-        ^(?P<street>[\d\w ./\-#]+?)
-        (?:,\s*(?P<address2>(?:Apt|Apartment|Suite|Ste|Unit|#|Bldg|Building|Floor|Fl|Rm|Room|Lot|Space|Dept|Trailer|Trlr|PO\s*Box|P\.O\. Box|POB|Box)[\s\w\-\.#]*))?
-        ,?\s*(?P<city>[A-Za-z .'-]+)
-        ,\s*(?P<state>[A-Z]{2})
-        \s+(?P<zip>\d{5}(?:-\d{4})?)
-        $""",
-        re.IGNORECASE | re.VERBOSE
+        r"^(?P<street>[\d\w ./\-#]+?)(?:,\s*(?P<address2>(?:Apt|Apartment|Suite|Ste|Unit|#|Bldg|Building|Floor|Fl|Rm|Room|Lot|Space|Dept|Trailer|Trlr|PO\s*Box|P\.O\. Box|POB|Box)[\s\w\-\.#]*))?,?\s*(?P<city>[A-Za-z .'-]+),\s*(?P<state>[A-Z]{2})\s+(?P<zip>\d{5}(?:-\d{4})?)$",
+        re.IGNORECASE
     )
 
     m = pat.search(rest)
@@ -41,7 +31,6 @@ def smart_address_split(address: str):
         state = m.group("state").strip(", ")
         zip_code = m.group("zip").strip(", ")
     else:
-        # Fallback: try to split anyway
         parts = [x.strip() for x in rest.split(",")]
         street = parts[0] if len(parts) > 0 else ""
         address2 = ""
@@ -52,7 +41,6 @@ def smart_address_split(address: str):
         state = state or ""
         zip_code = zip_code or ""
 
-    # Clean
     name = name.strip(", ")
     street = street.strip(", ")
     address2 = address2.strip(", ")
@@ -62,11 +50,9 @@ def smart_address_split(address: str):
 
     return name, street, address2, city, state, zip_code
 
-# ---- Streamlit UI ----
 st.set_page_config(page_title="Shipping Tools", layout="centered")
 st.title("Shipping Helper Tool")
 
-# --- Packaging Splitter ---
 BOX_CONFIGS = {
     "Los Doz": [12, 6, 2],
     "AML (9kg)": [9],
@@ -100,7 +86,6 @@ with st.expander("📦 Packaging Splitter", expanded=True):
         "Lb (1kg=4lb)": [str(format_lb(x)) for x in split]
     })
 
-# --- Address Splitter ---
 with st.expander("🏷️ Address Splitter", expanded=True):
     st.write("Paste an address (any format, partial or full, with or without country):")
     address_input = st.text_area(
@@ -118,7 +103,6 @@ with st.expander("🏷️ Address Splitter", expanded=True):
         st.write(f"**State:** {state}")
         st.write(f"**ZIP:** {zip_code}")
 
-        # Tab-separated with blank Org column after Name
         sheets_row = f"{name}\t\t{street}\t{address2}\t{city}\t{state}\t{zip_code}"
 
         st.markdown("#### Copy for Google Sheets Row")
