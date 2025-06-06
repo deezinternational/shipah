@@ -2,29 +2,7 @@ import streamlit as st
 import re
 from st_copy_to_clipboard import st_copy_to_clipboard
 
-# ---- Packaging Splitter ----
-BOX_CONFIGS = {
-    "Los Doz": [12, 6, 2],
-    "AML (9kg)": [9],
-    "AML (10kg)": [10]
-}
-
-def split_weight(weight, box_sizes):
-    box_sizes = sorted(box_sizes, reverse=True)
-    kg_left = weight
-    result = []
-    for size in box_sizes:
-        while kg_left >= size:
-            result.append(size)
-            kg_left -= size
-    if kg_left > 0:
-        result.append(round(kg_left, 2))
-    return result
-
-def format_lb(kg):
-    return int(kg * 4)
-
-# ---- Robust Address Splitter ----
+# ---- Address Splitter as before ----
 def robust_address_split(address: str):
     lines = [l.strip() for l in address.replace('\r\n', '\n').split('\n') if l.strip()]
     country = ""
@@ -65,20 +43,6 @@ def robust_address_split(address: str):
 st.set_page_config(page_title="Shipping Tools", layout="centered")
 st.title("Shipping Helper Tool")
 
-# --- Packaging Splitter ---
-with st.expander("📦 Packaging Splitter", expanded=True):
-    weight = st.number_input("Enter total shipment weight (kg):", min_value=0.1, step=0.1, value=25.0, format="%.1f")
-    option = st.selectbox("Select Packaging Option:", list(BOX_CONFIGS.keys()))
-    box_sizes = BOX_CONFIGS[option]
-    split = split_weight(weight, box_sizes)
-    st.subheader("Packaging Breakdown")
-    st.table({
-        "Box #": [f"{i+1}" for i in range(len(split))],
-        "Kg": [f"{x:.1f}" for x in split],
-        "Lb (1kg=4lb)": [str(format_lb(x)) for x in split]
-    })
-
-# --- Address Splitter ---
 with st.expander("🏷️ Address Splitter", expanded=True):
     st.write("Paste an address (any format, partial or full, with or without country):")
     address_input = st.text_area(
@@ -89,8 +53,31 @@ with st.expander("🏷️ Address Splitter", expanded=True):
     if address_input.strip():
         parts = robust_address_split(address_input)
         st.subheader("Split Address")
+
+        # Add custom CSS to make button and input align horizontally
+        st.markdown("""
+            <style>
+            .address-row {
+                display: flex;
+                align-items: center;
+                gap: 0.5em;
+                margin-bottom: 0.5em;
+            }
+            .address-row input {
+                flex: 1 1 70%;
+                margin-bottom: 0 !important;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+
         for label, value in parts.items():
-            col1, col2 = st.columns([10,1])
-            col1.text_input(label, value, key=label)
+            row_key = f"row_{label}"
+            st.markdown(f'<div class="address-row">', unsafe_allow_html=True)
+            st.text_input(label, value, key=label, label_visibility="visible")
+            # Insert the clipboard button as raw HTML in the same flex row
             if value:
-                col2.write(st_copy_to_clipboard(value, "📋"), unsafe_allow_html=True)
+                st.markdown(
+                    st_copy_to_clipboard(value, "📋"),
+                    unsafe_allow_html=True
+                )
+            st.markdown("</div>", unsafe_allow_html=True)
