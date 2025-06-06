@@ -1,9 +1,7 @@
 import streamlit as st
-from streamlit_extras.copy_to_clipboard import copy_to_clipboard
-
 import re
 
-# ----- Packaging Splitter -----
+# ---- Packaging Splitter ----
 
 BOX_CONFIGS = {
     "Los Doz": [12, 6, 2],
@@ -26,44 +24,36 @@ def split_weight(weight, box_sizes):
 def format_lb(kg):
     return int(kg * 4)
 
-# ----- Address Splitter -----
+# ---- Address Splitter ----
 
 def robust_address_split(address: str):
-    # Clean up and split lines
+    # Tidy up the address
     lines = [l.strip() for l in address.replace("\r\n", "\n").split("\n") if l.strip()]
     name = lines[0] if len(lines) > 1 else ""
     addr_line = lines[1] if len(lines) > 1 else lines[0] if lines else ""
     citystatezip = ""
     country = ""
     if len(lines) > 2:
-        # Handle 3+ lines: name, address, city/state/zip, country (maybe)
         addr_line = lines[1]
         citystatezip = lines[2]
         if len(lines) > 3:
             country = lines[3]
     elif ',' in addr_line:
-        # Try to split at last comma for city/state/zip vs street
         parts = addr_line.rsplit(',', 1)
         addr_line, citystatezip = parts[0].strip(), parts[1].strip()
-
-    # Extract city, state, zip
     city, state, zipcode = "", "", ""
     match = re.search(r"(.*?),?\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)", citystatezip)
     if match:
         city, state, zipcode = match.group(1), match.group(2), match.group(3)
     else:
-        # fallback: just assign everything to addr_line
         if not name:
             addr_line = address
             city = state = zipcode = ""
-    
-    # Try to guess country
     if not country:
         if "USA" in address or "United States" in address:
             country = "USA"
         else:
             country = ""
-
     return {
         "Name": name,
         "Street Address": addr_line,
@@ -73,13 +63,12 @@ def robust_address_split(address: str):
         "Country": country,
     }
 
-# ---- Streamlit App UI ----
+# ---- Streamlit UI ----
 
-st.set_page_config(page_title="Shipping Helper", layout="centered")
-
+st.set_page_config(page_title="Shipping Tools", layout="centered")
 st.title("Shipping Helper Tool")
 
-# --- Package Splitter ---
+# --- Packaging Splitter ---
 with st.expander("📦 Packaging Splitter", expanded=True):
     weight = st.number_input("Enter total shipment weight (kg):", min_value=0.1, step=0.1, value=25.0, format="%.1f")
     option = st.selectbox("Select Packaging Option:", list(BOX_CONFIGS.keys()))
@@ -100,14 +89,8 @@ with st.expander("🏷️ Address Splitter", expanded=True):
     address_input = st.text_area("Address Input", height=100, value="""Britt Kimmel
 15373 E Hinsdale Cir ste a,
 Centennial, CO 80112, USA""")
-    
     if address_input.strip():
         parts = robust_address_split(address_input)
         st.subheader("Split Address")
         for label, value in parts.items():
-            cols = st.columns([1, 5])
-            cols[0].write(f"**{label}**")
-            if value:
-                copy_to_clipboard(str(value), f"{value}", key=label)
-            else:
-                cols[1].write("-")
+            st.text_input(label, value, key=label)
