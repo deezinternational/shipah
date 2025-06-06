@@ -89,19 +89,9 @@ with st.expander("🏷️ Address Splitter", expanded=True):
     if address_input.strip():
         fields = robust_address_split(address_input)
         st.subheader("Split Address")
-
-        # Render table header
-        cols = st.columns([2, 6, 1])
-        cols[0].markdown("**Field**")
-        cols[1].markdown("**Value**")
-        cols[2].markdown("")
-
-        # Render each row as columns
         for label, value in fields:
-            cols = st.columns([2, 6, 1])
-            cols[0].markdown(f"{label}")
-            cols[1].text_input("", value, key=f"value_{label}", label_visibility="collapsed")
+            row = st.columns([2, 6, 1])
+            row[0].markdown(f"**{label}**")
+            row[1].text_input("", value, key=f"value_{label}", label_visibility="collapsed")
             if value:
-                cols[2].write(st_copy_to_clipboard(value, "📋"), unsafe_allow_html=True)
-            else:
-                cols[2].write("")
+                row[2].write(st_copy_to_clipboard(value, "📋"), unsafe_allow_html=True)
