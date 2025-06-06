@@ -119,7 +119,9 @@ with st.expander("🏷️ Address Splitter", expanded=True):
         st.write(f"**State:** {state}")
         st.write(f"**ZIP:** {zip_code}")
 
+        # Tab-separated with blank Org column after Name
         sheets_row = f"{name}\t\t{street}\t{address2}\t{city}\t{state}\t{zip_code}"
+
         st.markdown("#### Copy for Google Sheets Row")
         st.code(sheets_row, language="")
         st_copy_to_clipboard(sheets_row, "📋 Copy Row")
