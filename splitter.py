@@ -90,58 +90,18 @@ with st.expander("🏷️ Address Splitter", expanded=True):
         fields = robust_address_split(address_input)
         st.subheader("Split Address")
 
-        # Table header
-        table_html = """
-        <style>
-        .addr-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .addr-table th, .addr-table td {
-            padding: 6px 10px;
-            border: 1px solid #333;
-            text-align: left;
-        }
-        .addr-table th {
-            background: #222;
-        }
-        .addr-table input {
-            width: 100%;
-            padding: 4px;
-            border-radius: 4px;
-            border: 1px solid #444;
-            background: #232323;
-            color: #fff;
-        }
-        .clipboard-cell {
-            width: 50px;
-            text-align: center;
-        }
-        </style>
-        <table class="addr-table">
-          <thead>
-            <tr>
-              <th>Field</th>
-              <th>Value</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-        """
+        # Render table header
+        cols = st.columns([2, 6, 1])
+        cols[0].markdown("**Field**")
+        cols[1].markdown("**Value**")
+        cols[2].markdown("")
 
-        # Collect all table rows as HTML
-        for i, (label, value) in enumerate(fields):
-            btn_html = st_copy_to_clipboard(value, "📋") if value else ""
-            # Escape HTML in value to avoid breaking the cell
-            safe_value = value.replace('"', "&quot;")
-            table_html += f"""
-                <tr>
-                  <td><b>{label}</b></td>
-                  <td><input type="text" value="{safe_value}" readonly onclick="this.select()"/></td>
-                  <td class="clipboard-cell">{btn_html}</td>
-                </tr>
-            """
-
-        table_html += "</tbody></table>"
-
-        st.markdown(table_html, unsafe_allow_html=True)
+        # Render each row as columns
+        for label, value in fields:
+            cols = st.columns([2, 6, 1])
+            cols[0].markdown(f"{label}")
+            cols[1].text_input("", value, key=f"value_{label}", label_visibility="collapsed")
+            if value:
+                cols[2].write(st_copy_to_clipboard(value, "📋"), unsafe_allow_html=True)
+            else:
+                cols[2].write("")
