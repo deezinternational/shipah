@@ -2,29 +2,6 @@ import streamlit as st
 import re
 from st_copy_to_clipboard import st_copy_to_clipboard
 
-# ---- Packaging Splitter ----
-BOX_CONFIGS = {
-    "Los Doz": [12, 6, 2],
-    "AML (9kg)": [9],
-    "AML (10kg)": [10]
-}
-
-def split_weight(weight, box_sizes):
-    box_sizes = sorted(box_sizes, reverse=True)
-    kg_left = weight
-    result = []
-    for size in box_sizes:
-        while kg_left >= size:
-            result.append(size)
-            kg_left -= size
-    if kg_left > 0:
-        result.append(round(kg_left, 2))
-    return result
-
-def format_lb(kg):
-    return int(kg * 4)
-
-# ---- Robust Address Splitter ----
 def smart_address_split(address: str):
     # Remove country if present
     address = re.sub(r'\b(USA?|United States|US)\b\.?', '', address, flags=re.IGNORECASE).strip(", \n")
@@ -48,12 +25,12 @@ def smart_address_split(address: str):
     # Regex: street, optional address2, city, state, zip
     pat = re.compile(
         r"""^
-        (?P<street>[\d\w .#/-]+?)                                   # street address (non-greedy)
+        (?P<street>[\d\w ./\-\#]+?)                                      # street address (allow . / - #)
         (?:,\s*(?P<address2>(Apt|Apartment|Suite|Ste|Unit|#|Bldg|Building|Floor|Fl|Rm|Room|Lot|Space|Dept|Trailer|Trlr|PO Box|P\.O\. Box|POB|Box)\s*[\w\-]+))?   # optional address2
-        ,?\s*(?P<city>[A-Za-z .'-]+)                                # city
-        ,\s*(?P<state>[A-Z]{2})                                     # state
-        \s+(?P<zip>\d{5}(?:-\d{4})?)                                # zip
-        """, re.IGNORECASE | re.VERBOSE)
+        ,?\s*(?P<city>[A-Za-z .'-]+)                                     # city
+        ,\s*(?P<state>[A-Z]{2})                                          # state
+        \s+(?P<zip>\d{5}(?:-\d{4})?)                                     # zip
+        $""", re.IGNORECASE | re.VERBOSE)
 
     m = pat.search(rest)
     if m:
@@ -89,6 +66,27 @@ st.set_page_config(page_title="Shipping Tools", layout="centered")
 st.title("Shipping Helper Tool")
 
 # --- Packaging Splitter ---
+BOX_CONFIGS = {
+    "Los Doz": [12, 6, 2],
+    "AML (9kg)": [9],
+    "AML (10kg)": [10]
+}
+
+def split_weight(weight, box_sizes):
+    box_sizes = sorted(box_sizes, reverse=True)
+    kg_left = weight
+    result = []
+    for size in box_sizes:
+        while kg_left >= size:
+            result.append(size)
+            kg_left -= size
+    if kg_left > 0:
+        result.append(round(kg_left, 2))
+    return result
+
+def format_lb(kg):
+    return int(kg * 4)
+
 with st.expander("📦 Packaging Splitter", expanded=True):
     weight = st.number_input("Enter total shipment weight (kg):", min_value=0.1, step=0.1, value=25.0, format="%.1f")
     option = st.selectbox("Select Packaging Option:", list(BOX_CONFIGS.keys()))
