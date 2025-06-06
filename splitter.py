@@ -52,14 +52,7 @@ def robust_address_split(address: str):
         zip_code = ""
     if len(lines) > 1:
         name = lines[0]
-    return [
-        ("Name", name),
-        ("Street Address", street),
-        ("City", city),
-        ("State", state),
-        ("ZIP", zip_code),
-        ("Country", country)
-    ]
+    return name, street, city, state, zip_code
 
 # ---- Streamlit UI ----
 st.set_page_config(page_title="Shipping Tools", layout="centered")
@@ -84,14 +77,23 @@ with st.expander("🏷️ Address Splitter", expanded=True):
     address_input = st.text_area(
         "Address Input",
         height=100,
-        value="4506 Central School Road, St. Charles, MO 63304, USA"
+        value="Adam Sanders\n88 Huntoon Memorial Hwy\nRochdale, MA 01542"
     )
     if address_input.strip():
-        fields = robust_address_split(address_input)
+        name, street, city, state, zip_code = robust_address_split(address_input)
         st.subheader("Split Address")
-        for label, value in fields:
-            row = st.columns([2, 6, 1])
-            row[0].markdown(f"**{label}**")
-            row[1].text_input("", value, key=f"value_{label}", label_visibility="collapsed")
-            if value:
-                row[2].write(st_copy_to_clipboard(value, "📋"), unsafe_allow_html=True)
+
+        # For review
+        st.write(f"**Name:** {name}")
+        st.write(f"**Street Address:** {street}")
+        st.write(f"**City:** {city}")
+        st.write(f"**State:** {state}")
+        st.write(f"**ZIP:** {zip_code}")
+
+        # Format for Google Sheets: tabs between columns
+        sheets_row = f"{name}\t{street}\t{city}\t{state}\t{zip_code}"
+
+        st.markdown("#### Copy for Google Sheets Row")
+        st.code(sheets_row, language="")  # for quick visual
+        st_copy_to_clipboard(sheets_row, "📋 Copy Row")
+        st.caption("Paste directly into your Google Sheet row (it will fill columns).")
