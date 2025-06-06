@@ -37,67 +37,64 @@ def extract_address2(street):
     return street.strip(), ""
     
 def smart_address_split(address: str):
-    lines = [l.strip() for l in address.replace('\r\n', '\n').split('\n') if l.strip()]
-    # If all on one line, split by comma for possible name presence
-    if len(lines) == 1:
-        items = [x.strip() for x in lines[0].split(',')]
-        if len(items) >= 4:
-            name = items[0]
-            street = items[1]
-            city = items[2]
-            state_zip = items[3]
-        elif len(items) == 3:
-            name = ""
-            street = items[0]
-            city = items[1]
-            state_zip = items[2]
-        else:
-            name = ""
-            street = lines[0]
-            city = ""
-            state_zip = ""
-    else:
-        if lines and not any(char.isdigit() for char in lines[0]):
-            name = lines[0]
-            street = lines[1] if len(lines) > 1 else ""
-            city_state_zip = lines[2] if len(lines) > 2 else ""
-        else:
-            name = ""
-            street = lines[0]
-            city_state_zip = lines[1] if len(lines) > 1 else ""
-        city = ""
-        state_zip = ""
-        if ',' in city_state_zip:
-            parts = city_state_zip.split(',')
-            city = parts[0].strip()
-            state_zip = parts[1].strip() if len(parts) > 1 else ""
-        else:
-            city = city_state_zip
-            state_zip = ""
-    state, zip_code = "", ""
-    if 'state_zip' in locals():
-        m = re.match(r'([A-Z]{2})\s*(\d{5}(?:-\d{4})?)?', state_zip)
-        if m:
-            state = m.group(1)
-            zip_code = m.group(2) if m.group(2) else ""
-        else:
-            sz = state_zip.strip().split()
-            if len(sz) == 2:
-                state, zip_code = sz
-            elif len(sz) == 1:
-                state = sz[0]
-    else:
-        state, zip_code = "", ""
-    name = name.strip(",")
-    street = street.strip(",")
-    city = city.strip(",")
-    state = state.strip(",")
-    zip_code = zip_code.strip(",")
+    # Remove country if present
+    address = re.sub(r'\b(USA?|United States|US)\b\.?', '', address, flags=re.IGNORECASE).strip(", \n")
 
-    # --- Address 2 extraction ---
-    street_clean, address2 = extract_address2(street)
+    # Split into lines or by comma if single line
+    if "\n" in address:
+        lines = [x.strip() for x in address.split("\n") if x.strip()]
+    else:
+        lines = [x.strip() for x in address.split(",")]
 
-    return name, street_clean, address2, city, state, zip_code
+    # If first line is clearly a name (no digits), use as name
+    if lines and not any(char.isdigit() for char in lines[0]):
+        name = lines[0]
+        lines = lines[1:]
+    else:
+        name = ""
+
+    # Now flatten the rest for easier parsing
+    rest = ", ".join(lines)
+
+    # Regex: street, optional address2, city, state, zip
+    # E.g. "14828 W 6TH AVE, STE 9B, GOLDEN, CO 80401-5000"
+    pat = re.compile(
+        r"""^
+        (?P<street>[\d\w .#/-]+?)            # street address (non-greedy)
+        (?:,\s*(?P<address2>(Apt|Apartment|Suite|Ste|Unit|#|Bldg|Building|Floor|Fl|Rm|Room|Lot|Space|Dept|Trailer|Trlr|PO Box|P\.O\. Box|POB|Box)\s*[\w\-]+))?   # optional address2
+        ,?\s*(?P<city>[A-Za-z .'-]+)         # city
+        ,\s*(?P<state>[A-Z]{2})              # state
+        \s+(?P<zip>\d{5}(?:-\d{4})?)         # zip
+        """, re.IGNORECASE | re.VERBOSE)
+
+    m = pat.search(rest)
+    if m:
+        street = m.group("street").strip(", ")
+        address2 = m.group("address2") or ""
+        city = m.group("city").strip(", ")
+        state = m.group("state").strip(", ")
+        zip_code = m.group("zip").strip(", ")
+    else:
+        # Fallback: try to split anyway
+        parts = [x.strip() for x in rest.split(",")]
+        street = parts[0] if len(parts) > 0 else ""
+        address2 = ""
+        city = parts[1] if len(parts) > 1 else ""
+        state_zip = parts[2] if len(parts) > 2 else ""
+        m2 = re.match(r"([A-Z]{2})\s*(\d{5}(?:-\d{4})?)?", state_zip)
+        state, zip_code = (m2.groups() if m2 else ("", ""))
+        state = state or ""
+        zip_code = zip_code or ""
+
+    # Clean
+    name = name.strip(", ")
+    street = street.strip(", ")
+    address2 = address2.strip(", ")
+    city = city.strip(", ")
+    state = state.strip(", ")
+    zip_code = zip_code.strip(", ")
+
+    return name, street, address2, city, state, zip_code
 
 # ---- Streamlit UI ----
 st.set_page_config(page_title="Shipping Tools", layout="centered")
@@ -122,7 +119,7 @@ with st.expander("🏷️ Address Splitter", expanded=True):
     address_input = st.text_area(
         "Address Input",
         height=100,
-        value="Adam Sanders\n88 Huntoon Memorial Hwy\nRochdale, MA 01542"
+        value="Adam Sanders\n14828 W 6TH AVE, STE 9B, GOLDEN, CO 80401-5000 US"
     )
     if address_input.strip():
         name, street, address2, city, state, zip_code = smart_address_split(address_input)
@@ -134,9 +131,7 @@ with st.expander("🏷️ Address Splitter", expanded=True):
         st.write(f"**State:** {state}")
         st.write(f"**ZIP:** {zip_code}")
 
-        # Tab-separated with blank Address2 if not found
         sheets_row = f"{name}\t\t{street}\t{address2}\t{city}\t{state}\t{zip_code}"
-
         st.markdown("#### Copy for Google Sheets Row")
         st.code(sheets_row, language="")
         st_copy_to_clipboard(sheets_row, "📋 Copy Row")
