@@ -53,14 +53,13 @@ def robust_address_split(address: str):
     if len(lines) > 1:
         name = lines[0]
     return [
-        {"Field": "Name", "Value": name},
-        {"Field": "Street Address", "Value": street},
-        {"Field": "City", "Value": city},
-        {"Field": "State", "Value": state},
-        {"Field": "ZIP", "Value": zip_code},
-        {"Field": "Country", "Value": country}
+        ("Name", name),
+        ("Street Address", street),
+        ("City", city),
+        ("State", state),
+        ("ZIP", zip_code),
+        ("Country", country)
     ]
-
 
 # ---- Streamlit UI ----
 st.set_page_config(page_title="Shipping Tools", layout="centered")
@@ -90,45 +89,59 @@ with st.expander("🏷️ Address Splitter", expanded=True):
     if address_input.strip():
         fields = robust_address_split(address_input)
         st.subheader("Split Address")
-        
+
         # Table header
-        st.markdown(
+        table_html = """
+        <style>
+        .addr-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .addr-table th, .addr-table td {
+            padding: 6px 10px;
+            border: 1px solid #333;
+            text-align: left;
+        }
+        .addr-table th {
+            background: #222;
+        }
+        .addr-table input {
+            width: 100%;
+            padding: 4px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background: #232323;
+            color: #fff;
+        }
+        .clipboard-cell {
+            width: 50px;
+            text-align: center;
+        }
+        </style>
+        <table class="addr-table">
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Value</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+        """
+
+        # Collect all table rows as HTML
+        for i, (label, value) in enumerate(fields):
+            btn_html = st_copy_to_clipboard(value, "📋") if value else ""
+            # Escape HTML in value to avoid breaking the cell
+            safe_value = value.replace('"', "&quot;")
+            table_html += f"""
+                <tr>
+                  <td><b>{label}</b></td>
+                  <td><input type="text" value="{safe_value}" readonly onclick="this.select()"/></td>
+                  <td class="clipboard-cell">{btn_html}</td>
+                </tr>
             """
-            <style>
-            .addr-table th, .addr-table td { padding: 4px 10px; text-align: left; }
-            .addr-table td { vertical-align: middle; }
-            </style>
-            <table class="addr-table">
-              <thead>
-                <tr>
-                  <th>Field</th>
-                  <th>Value</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-            """,
-            unsafe_allow_html=True
-        )
-        
-        for i, entry in enumerate(fields):
-            label = entry["Field"]
-            value = entry["Value"]
-            key = f"{label}_{i}"
-            st.markdown(
-                f"""
-                <tr>
-                  <td style="vertical-align:middle;"><b>{label}</b></td>
-                  <td style="vertical-align:middle;">
-                    <input style="width:98%;padding:4px;border-radius:4px;border:1px solid #444;background:#232323;color:#fff;" 
-                           type="text" value="{value}" readonly onclick="this.select()"/>
-                  </td>
-                  <td style="vertical-align:middle;">
-                    {st_copy_to_clipboard(value, "📋")}
-                  </td>
-                </tr>
-                """,
-                unsafe_allow_html=True
-            )
-        # End table
-        st.markdown("</tbody></table>", unsafe_allow_html=True)
+
+        table_html += "</tbody></table>"
+
+        st.markdown(table_html, unsafe_allow_html=True)
